@@ -1,0 +1,21 @@
+# ROS 2 / colcon generated artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+*.whl
+
+# Lecture notes (local study material, not part of the lab deliverable)
+lecture-*.txt
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp
+*~

@@ -1,0 +1,36 @@
+{
+  "name": "Ubuntu 24.04 Noble (ROS 2 Jazzy)",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "runArgs": [
+    "--ipc=host"
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}/.copilot/agents,target=/home/vscode/.copilot/agents,type=bind,readonly",
+    "source=${localEnv:HOME}/.agents,target=/home/vscode/.agents,type=bind,readonly",
+    "source=${localEnv:HOME}/Library/Application Support/Code/User/prompts,target=/home/vscode/.host_prompts,type=bind,readonly"
+  ],
+  "postStartCommand": "mkdir -p /home/vscode/.vscode-server/data/User && ln -sfn /home/vscode/.host_prompts /home/vscode/.vscode-server/data/User/prompts",
+  "remoteEnv": {
+    "PYTHONPATH": "/opt/ros/jazzy/lib/python3.12/site-packages:/opt/ros/jazzy/local/lib/python3.12/dist-packages:${containerEnv:PYTHONPATH}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "ms-iot.vscode-ros"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "noPassword"
+    }
+  },
+  "forwardPorts": [
+    6080
+  ]
+}
