@@ -1,5 +1,24 @@
 # Lab 1 — Driving an Off-the-Shelf Robot from ROS 2
 
+<details>
+<summary><b>LAB 1 — WHAT YOU DO (original task statement)</b></summary>
+
+Take a standard robot off the shelf, and drive it from ROS 2. Any model in the catalogue; wheels or rotors, your choice.
+
+1. Choose and check — run the checks before you commit to a model
+2. Your own world — a ground plane and an `<include>`, plus whatever plugin that model needs to move
+3. Bridge it, both ways — commands in, odometry out. Only the entries you use
+4. Read the telemetry — a small node that subscribes to `/odom` and reports where the robot is
+5. Drive it from the command line — and check the distance against what you asked for
+6. Then from the keyboard — teleop_twist_keyboard, with no changes to it
+7. Show the path — in RViz, and as a plot drawn from `/odom`
+
+You are given a repository with the skeleton in it. Work in that.
+
+</details>
+
+---
+
 Integration and control of the Clearpath Husky (`COSTAR_HUSKY_SENSOR_CONFIG_1`) model from Gazebo Fuel in ROS 2 Jazzy using Gazebo Harmonic.
 
 ---
