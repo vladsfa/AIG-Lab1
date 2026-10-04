@@ -103,19 +103,19 @@ $X-Y$ trajectory recorded by `src/my_fuel_lab/scripts/plot_path.py` from the `/o
 
 Actual execution data obtained by running `scripts/measure_mission.py` against the running simulation:
 
-| Segment | Command $(v, \omega, t)$ | Asked Distance | Got Distance (`/odom`) | Difference |
+| Segment | Command (v, ω, t) | Asked Distance | Got Distance (`/odom`) | Difference |
 | :--- | :--- | :---: | :---: | :---: |
-| **Straight 1 (bottom)** | $v=0.5\text{ m/s}, \omega=0.0\text{ rad/s}, 6.0\text{ s}$ | $3.00\text{ m}$ | $2.48\text{ m}$ | $0.52\text{ m}$ ($17.3\%$) |
-| **Turn Left 90°** | $v=0.0\text{ m/s}, \omega=1.0\text{ rad/s}, 1.57\text{ s}$ | $0.00\text{ m}$ | $0.00\text{ m}$ | $0.00\text{ m}$ ($0.0\%$) |
-| **Straight 2** | $v=0.5\text{ m/s}, \omega=0.0\text{ rad/s}, 4.0\text{ s}$ | $2.00\text{ m}$ | $1.55\text{ m}$ | $0.45\text{ m}$ ($22.5\%$) |
-| **Loop (curve)** | $v=0.5\text{ m/s}, \omega=0.6\text{ rad/s}, 10.0\text{ s}$ | $5.00\text{ m}$ | $3.79\text{ m}$ | $1.21\text{ m}$ ($24.2\%$) |
-| **Straight 3 (final)** | $v=0.5\text{ m/s}, \omega=0.0\text{ rad/s}, 4.0\text{ s}$ | $2.00\text{ m}$ | $1.42\text{ m}$ | $0.58\text{ m}$ ($29.0\%$) |
-| **TOTAL** | — | **$12.00\text{ m}$** | **$9.24\text{ m}$** | **$2.76\text{ m}$** ($23.0\%$) |
+| **Straight 1 (bottom)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `6.0 s` | 3.00 m | 2.48 m | 0.52 m (17.3%) |
+| **Turn Left 90°** | `v = 0.0 m/s`, `ω = 1.0 rad/s`, `1.57 s` | 0.00 m | 0.00 m | 0.00 m (0.0%) |
+| **Straight 2** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.55 m | 0.45 m (22.5%) |
+| **Loop (curve)** | `v = 0.5 m/s`, `ω = 0.6 rad/s`, `10.0 s` | 5.00 m | 3.79 m | 1.21 m (24.2%) |
+| **Straight 3 (final)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.42 m | 0.58 m (29.0%) |
+| **TOTAL** | — | **12.00 m** | **9.24 m** | **2.76 m (23.0%)** |
 
 #### Key Analytical Takeaways:
-1. **Simulation Time vs Wall-Clock:** The constant ~17–23% discrepancy is primarily driven by the software-rendered container Real-Time Factor ($\text{RTF} \approx 0.78$–$0.82$). In $6$ seconds of real time, the physics engine advances only $\approx 4.8$ seconds of simulation time.
-2. **Skid-Steer Lateral Scrubbing:** The largest absolute error ($1.21\text{ m}$) occurred during the **Loop** maneuver because turning a 4WD rigid-wheel base requires lateral tire slipping/scrubbing against the ground plane, introducing significant drag and odometry drift.
-3. **Pure In-Place Rotation:** The $90^\circ$ turn on the spot yielded $0.00\text{ m}$ translational displacement, confirming symmetric wheel speed application by the `DiffDrive` plugin during pure angular commands.
+1. **Simulation Time vs Wall-Clock:** The constant ~17–23% discrepancy is primarily driven by the software-rendered container Real-Time Factor (RTF ≈ 0.78–0.82). In 6 seconds of real time, the physics engine advances only ≈ 4.8 seconds of simulation time.
+2. **Skid-Steer Lateral Scrubbing:** The largest absolute error (1.21 m) occurred during the **Loop** maneuver because turning a 4WD rigid-wheel base requires lateral tire slipping/scrubbing against the ground plane, introducing significant drag and odometry drift.
+3. **Pure In-Place Rotation:** The 90° turn on the spot yielded 0.00 m translational displacement, confirming symmetric wheel speed application by the `DiffDrive` plugin during pure angular commands.
 
 ---
 
