@@ -16,7 +16,7 @@ Integration and control of the Clearpath Husky (`COSTAR_HUSKY_SENSOR_CONFIG_1`) 
    ```
 4. After the container loads, open a terminal and run the environment setup script (installs dependencies and builds the workspace):
    ```bash
-   ./setup_ros2.sh
+   ./setup.sh
    ```
 
 5. Open the graphical desktop (Fluxbox/VNC) in your browser:
