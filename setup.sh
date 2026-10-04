@@ -36,6 +36,10 @@ SETUP_LINE="source ${WS_DIR}/install/setup.bash"
 if ! grep -qF "$SETUP_LINE" ~/.bashrc; then
     echo "$SETUP_LINE" >> ~/.bashrc
 fi
+# Activate both environments in the current shell
+# (works only if script is run as: source setup.sh)
+source /opt/ros/jazzy/setup.bash
+source "${WS_DIR}/install/setup.bash"
 
 echo ""
 echo "✅ ALL DONE! ROS 2 Jazzy is configured for workspace: ${WS_DIR}"

@@ -57,6 +57,10 @@ Replays the test route (straight $\rightarrow$ 90° turn $\rightarrow$ straight 
 ```bash
 python3 src/my_fuel_lab/scripts/measure_mission.py
 ```
+Default mode uses Gazebo `/clock` sim-time (same as `--sim-time`, requires the `/clock` bridge in `bridge.yaml`). To run with system wall-clock time instead (ignores `/clock`):
+```bash
+python3 src/my_fuel_lab/scripts/measure_mission.py --wall-time
+```
 
 #### Terminal 5: Interactive Keyboard Teleoperation (optional)
 Drive the robot manually with `teleop_twist_keyboard`:
@@ -101,24 +105,24 @@ $X-Y$ trajectory recorded by `src/my_fuel_lab/scripts/plot_path.py` from the `/o
 
 ## Numbers
 
-Actual execution data obtained by running `scripts/measure_mission.py` against the running simulation:
+Actual execution data obtained by running `scripts/measure_mission.py` against the running simulation in two timing modes — wall-clock (`--wall-time`) vs Gazebo sim-time (default, `/clock` bridge):
 
-| Segment | Command (v, ω, t) | Asked Distance | Got Distance (`/odom`) | Difference |
+| Segment | Command (v, ω, t) | Asked Distance | Got (`--wall-time`) | Got (sim-time, `/clock`) |
 | :--- | :--- | :---: | :---: | :---: |
-| **Straight 1 (bottom)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `6.0 s` | 3.00 m | 2.48 m | 0.52 m (17.3%) |
-| **Turn Left 90°** | `v = 0.0 m/s`, `ω = 1.0 rad/s`, `1.57 s` | 0.00 m | 0.00 m | 0.00 m (0.0%) |
-| **Straight 2** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.55 m | 0.45 m (22.5%) |
-| **Loop (curve)** | `v = 0.5 m/s`, `ω = 0.6 rad/s`, `10.0 s` | 5.00 m | 3.79 m | 1.21 m (24.2%) |
-| **Straight 3 (final)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.42 m | 0.58 m (29.0%) |
-| **TOTAL** | — | **12.00 m** | **9.24 m** | **2.76 m (23.0%)** |
+| **Straight 1 (bottom)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `6.0 s` | 3.00 m | 2.48 m (−0.52 m, −17.3%) | 3.01 m (+0.01 m, +0.3%) |
+| **Turn Left 90°** | `v = 0.0 m/s`, `ω = 1.0 rad/s`, `1.57 s` | 0.00 m | 0.00 m (0.0%) | 0.00 m (0.0%) |
+| **Straight 2** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.55 m (−0.45 m, −22.5%) | 2.00 m (0.0%) |
+| **Loop (curve)** | `v = 0.5 m/s`, `ω = 0.6 rad/s`, `10.0 s` | 5.00 m | 3.79 m (−1.21 m, −24.2%) | 5.00 m (0.0%) |
+| **Straight 3 (final)** | `v = 0.5 m/s`, `ω = 0.0 rad/s`, `4.0 s` | 2.00 m | 1.42 m (−0.58 m, −29.0%) | 2.01 m (+0.01 m, +0.5%) |
+| **TOTAL** | — | **12.00 m** | **9.24 m (−2.76 m, −23.0%)** | **12.03 m (+0.03 m, +0.25%)** |
 
 #### Key Analytical Takeaways:
-1. **Simulation Time vs Wall-Clock:** The constant ~17–23% discrepancy is primarily driven by the software-rendered container Real-Time Factor (RTF ≈ 0.78–0.82). In 6 seconds of real time, the physics engine advances only ≈ 4.8 seconds of simulation time.
-2. **Skid-Steer Lateral Scrubbing:** The largest absolute error (1.21 m) occurred during the **Loop** maneuver because turning a 4WD rigid-wheel base requires lateral tire slipping/scrubbing against the ground plane, introducing significant drag and odometry drift.
-3. **Pure In-Place Rotation:** The 90° turn on the spot yielded 0.00 m translational displacement, confirming symmetric wheel speed application by the `DiffDrive` plugin during pure angular commands.
+1. **Simulation Time vs Wall-Clock:** The constant ~17–29% shortfall in `--wall-time` mode is primarily driven by the software-rendered container Real-Time Factor (RTF ≈ 0.78–0.82). In 6 seconds of real time, the physics engine advances only ≈ 4.8 seconds of simulation time, so each segment stops early. With the `/clock` bridge (sim-time mode) the same commands last exactly as long in physics time, reducing total error from 2.76 m to 0.03 m.
+2. **Loop error was timing, not scrubbing:** The largest absolute wall-time error (1.21 m) occurred during the **Loop** maneuver, but in sim-time mode the loop yields exactly 5.00 m from 5.00 m asked, so lateral tire scrubbing of the 4WD skid-steer base contributes negligibly here.
+3. **Pure In-Place Rotation:** The 90° turn on the spot yielded 0.00 m translational displacement in both modes, confirming symmetric wheel speed application by the `DiffDrive` plugin during pure angular commands.
 
 ---
 
 ## Compare
 
-Driving from the command line (`ros2 topic pub`) provides precise, deterministic input parameters (exact velocity and fixed duration), making it ideal for quantitative benchmarking, testing straight-line odometry accuracy, and repeatable automated experiments. However, it lacks interactivity and requires explicit stop commands (`{}`) to prevent runaway motion due to controller velocity latching. In contrast, keyboard teleoperation (`teleop_twist_keyboard`) offers intuitive, real-time closed-loop control with immediate stop-on-release safety semantics, enabling complex maneuvers (such as loops and turns); however, human reaction delay and variable keypress durations make trajectories non-deterministic and unsuitable for repeatable distance calibration.
+Both modes run the same automated mission (`measure_mission.py`: straight $\rightarrow$ 90° turn $\rightarrow$ straight $\rightarrow$ loop $\rightarrow$ finish) and differ only in the clock used for segment timing. Wall-clock mode (`--wall-time`) measures durations with system time and ignores `/clock`, making it simple and independent of the bridge setup, but it under-drives every segment by ~17–29% (TOTAL 9.24 m vs 12.00 m asked) whenever the container RTF < 1.0, so results are only comparable on machines with identical performance. In contrast, sim-time mode (default, `/clock` bridge) measures durations with Gazebo physics time via `use_sim_time`, so each command lasts exactly as long in simulation (TOTAL 12.03 m vs 12.00 m asked, +0.25%) regardless of rendering slowdown — at the cost of requiring the `/clock` (`gz.msgs.Clock` → `rosgraph_msgs/msg/Clock`) bridge entry and an active, unpaused simulation.

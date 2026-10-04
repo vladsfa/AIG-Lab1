@@ -5,14 +5,17 @@ Runs the SAME segments as mission_demo.py while recording /odom,
 then reports per-segment and total asked vs measured path length.
 
 Usage:
-    python3 src/my_fuel_lab/scripts/measure_mission.py
+    python3 src/my_fuel_lab/scripts/measure_mission.py [--wall-time | --sim-time]
 Requires Gazebo + bridge running and unpaused.
 """
+import argparse
 import math
 import time
 
 import rclpy
+from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
@@ -31,8 +34,11 @@ def quat_to_yaw(x, y, z, w):
 
 
 class Recorder(Node):
-    def __init__(self):
-        super().__init__('measure_mission')
+    def __init__(self, use_sim_time: bool = True):
+        super().__init__(
+            'measure_mission',
+            parameter_overrides=[Parameter('use_sim_time', Parameter.Type.BOOL, use_sim_time)],
+        )
         self.xs = []
         self.ys = []
         self.yaw = 0.0
@@ -54,12 +60,54 @@ def path_length(xs, ys, i0, i1):
     return d
 
 
+def sim_now(node: Node):
+    """Поточний час за годинником ROS (sim-time, якщо use_sim_time:=true)."""
+    return node.get_clock().now()
+
+
+def wait_for_sim_time(node: Node, timeout_wall_sec: float = 5.0) -> bool:
+    """Чекає, поки /clock почне рухатись (nanoseconds > 0)."""
+    t0 = time.time()
+    while rclpy.ok() and time.time() - t0 < timeout_wall_sec:
+        rclpy.spin_once(node, timeout_sec=0.1)
+        if sim_now(node).nanoseconds > 0:
+            return True
+    return sim_now(node).nanoseconds > 0
+
+
+def sleep_sim(node: Node, dur_sec: float):
+    """Сон за SIM-часом: триває стільки, скільки потрібно фізиці Gazebo."""
+    end = sim_now(node) + Duration(seconds=dur_sec)
+    while rclpy.ok() and sim_now(node) < end:
+        rclpy.spin_once(node, timeout_sec=0.05)
+        # крихітна wall-пауза, щоб не палити CPU; тривалість міряємо лише по sim-time
+        time.sleep(0.01)
+
+
 def main():
-    rclpy.init()
-    node = Recorder()
+    parser = argparse.ArgumentParser(
+        description="Measure asked vs got distance for the mission_demo route."
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '--wall-time',
+        action='store_true',
+        help='Use system wall-clock time instead of Gazebo /clock'
+    )
+    group.add_argument(
+        '--sim-time',
+        action='store_true',
+        help='Use Gazebo /clock sim time (default)'
+    )
+    args, ros_args = parser.parse_known_args()
+
+    use_sim = not args.wall_time
+
+    rclpy.init(args=ros_args)
+    node = Recorder(use_sim_time=use_sim)
     pub = node.create_publisher(Twist, '/cmd_vel', 10)
 
-    # wait for first /odom
+    # wait for first /odom (wall-time, бо sim-time може ще стояти)
     t0 = time.time()
     while not node.has_odom and time.time() - t0 < 5.0:
         rclpy.spin_once(node, timeout_sec=0.1)
@@ -68,7 +116,22 @@ def main():
         node.destroy_node()
         rclpy.shutdown()
         return
-    time.sleep(1.0)
+
+    mode_str = "sim time" if use_sim else "wall time"
+    if use_sim:
+        node.get_logger().info('Waiting for /clock (sim time)...')
+        if not wait_for_sim_time(node, timeout_wall_sec=5.0):
+            node.get_logger().warn(
+                'No /clock received! Перевір bridge.yaml: має бути бридж '
+                '/clock (gz.msgs.Clock -> rosgraph_msgs/msg/Clock). '
+                'Продовжую, але тривалість буде мірятись некоректно.')
+        else:
+            node.get_logger().info(
+                f'Sim time active: {sim_now(node).nanoseconds / 1e9:.2f}s')
+    else:
+        node.get_logger().info('Running in WALL-CLOCK mode (ignoring /clock)')
+
+    sleep_sim(node, 1.0)
 
     results = []
     total_asked_dist = 0.0
@@ -79,14 +142,14 @@ def main():
         msg = Twist()
         msg.linear.x = v
         msg.angular.z = w
-        node.get_logger().info(f'{desc}: v={v} m/s, w={w} rad/s for {dur}s')
-        end = time.time() + dur
-        while time.time() < end and rclpy.ok():
+        node.get_logger().info(f'{desc}: v={v} m/s, w={w} rad/s for {dur}s ({mode_str})')
+        end = sim_now(node) + Duration(seconds=dur)
+        while rclpy.ok() and sim_now(node) < end:
             pub.publish(msg)
-            rclpy.spin_once(node, timeout_sec=0.0)
-            time.sleep(0.1)
+            rclpy.spin_once(node, timeout_sec=0.05)
+            time.sleep(0.02)  # лише щоб не спамити; межа циклу — sim-time
         pub.publish(Twist())
-        time.sleep(0.5)
+        sleep_sim(node, 0.5)
         for _ in range(5):
             rclpy.spin_once(node, timeout_sec=0.1)
         i1 = len(node.xs)
