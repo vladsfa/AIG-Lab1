@@ -1,10 +1,16 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+)
+from launch.event_handlers import OnShutdown
+from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+
 
 def generate_launch_description():
     pkg_my_fuel_lab = get_package_share_directory('my_fuel_lab')
@@ -13,12 +19,15 @@ def generate_launch_description():
     world_path = os.path.join(pkg_my_fuel_lab, 'worlds', 'fuel_world.sdf')
     bridge_config_path = os.path.join(pkg_my_fuel_lab, 'config', 'bridge.yaml')
 
-    # Launch Gazebo (use -s in gz_args for headless mode)
+    # Launch Gazebo Sim
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')
         ),
-        launch_arguments={'gz_args': f'-r {world_path}'}.items(),
+        launch_arguments={
+            'gz_args': f'-r {world_path}',
+            'on_exit_shutdown': 'true',
+        }.items(),
     )
 
     # Launch the bridge
@@ -26,18 +35,32 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         parameters=[{'config_file': bridge_config_path}],
-        output='screen'
+        output='screen',
     )
 
-    # Launch RViz2
+    # Launch RViz2 (закриття вікна RViz спричинить завершення всього лаунчу)
     rviz = Node(
         package='rviz2',
         executable='rviz2',
-        output='screen'
+        output='screen',
+        on_exit=Shutdown(),
+    )
+
+    # Примусове закриття дочірніх процесів Gazebo під час завершення лаунчу
+    cleanup_gz = RegisterEventHandler(
+        OnShutdown(
+            on_shutdown=[
+                ExecuteProcess(
+                    cmd=['killall', '-9', 'ruby', 'gz'],
+                    output='screen',
+                )
+            ]
+        )
     )
 
     return LaunchDescription([
         gz_sim,
         bridge,
-        rviz
+        rviz,
+        cleanup_gz,
     ])
